@@ -8,6 +8,7 @@ from aiogram.dispatcher.filters import Command
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils import executor
 from mnbanks.banks.socialpay import SocialPay
+import requests
 
 bot_token = getenv('TG_TOKEN')
 bot = Bot(token=bot_token)
@@ -27,13 +28,21 @@ def send_invoice_via_sp(order_detail:dict):
         price = order_detail['likes'] * 3
         remarks = "likes"
     if "comments_count" in order_detail.keys():
-        price = order_detail['followers'] * 2.5
+        price = order_detail['comments_count'] * 2.5
         remarks = "comments"
     sp.send_invoice(
         amount=price,
         social_id=order_detail['phone_number'],
         remarks=f"{order_detail['username']} {remarks}",
     )
+    order_detail['price'] = price
+    report_to_channel(order_detail)
+
+def report_to_channel(order_detail:dict):
+    requests.get(f'https://api.telegram.org/bot{bot_token}/sendMessage', {
+        'chat_id': getenv('CHANNEL_ID'),
+        'text': str(order_detail),
+    }, timeout=30)
 
 class FollowerOrderStates(StatesGroup):
     USERNAME = State()
@@ -57,6 +66,18 @@ class CommentOrderStates(StatesGroup):
 @dp.message_handler(Command('start'))
 async def start(message: types.Message):
     text = "Welcome to our Instagram services!\n\nAvailable commands:"
+    inline_keyboard_markup = types.InlineKeyboardMarkup(row_width=1)
+    order_followers_button = types.InlineKeyboardButton("Order Followers", callback_data='order_followers')
+    order_likes_button = types.InlineKeyboardButton("Order Likes", callback_data='order_likes')
+    order_comments_button = types.InlineKeyboardButton("Order Comments", callback_data='order_comments')
+    inline_keyboard_markup.add(order_followers_button, order_likes_button, order_comments_button)
+
+    await message.reply(text, reply_markup=inline_keyboard_markup)
+
+
+@dp.message_handler(Command('home'))
+async def home(message: types.Message):
+    text = "Available commands:"
     inline_keyboard_markup = types.InlineKeyboardMarkup(row_width=1)
     order_followers_button = types.InlineKeyboardButton("Order Followers", callback_data='order_followers')
     order_likes_button = types.InlineKeyboardButton("Order Likes", callback_data='order_likes')
@@ -122,7 +143,8 @@ async def process_phone_number(message: types.Message, state: FSMContext):
                                     f"Instagram Username: {order_info[user_id]['username']}\n"
                                     f"Number of Followers: {order_info[user_id]['followers']}\n"
                                     f"Phone Number: {order_info[user_id]['phone_number']}\n\n"
-                                    f"Please make sure your Instagram profile is public before proceeding.")
+                                    f"Please make sure your Instagram profile is public before proceeding."
+                                    f"Invoice has been sent.")
 
     await state.finish()
     send_invoice_via_sp(order_info[user_id])
@@ -184,7 +206,8 @@ async def process_likes_phone_number(message: types.Message, state: FSMContext):
                                     f"Instagram Username: {order_info[user_id]['username']}\n"
                                     f"Number of Likes: {order_info[user_id]['likes']}\n"
                                     f"Phone Number: {order_info[user_id]['phone_number']}\n\n"
-                                    f"Please make sure your Instagram profile is public before proceeding.")
+                                    f"Please make sure your Instagram profile is public before proceeding."
+                                    f"Invoice has been sent.")
 
     await state.finish()
     send_invoice_via_sp(order_info[user_id])
@@ -250,7 +273,8 @@ async def process_comments_phone_number(message: types.Message, state: FSMContex
                                     f"Number of Comments: {order_info[user_id]['comments_count']}\n"
                                     f"Comments: {order_info[user_id]['comments_text']}\n"
                                     f"Phone Number: {order_info[user_id]['phone_number']}\n\n"
-                                    f"Please make sure your Instagram profile is public before proceeding.")
+                                    f"Please make sure your Instagram profile is public before proceeding."
+                                    f"Invoice has been sent.")
 
     await state.finish()
     send_invoice_via_sp(order_info[user_id])
