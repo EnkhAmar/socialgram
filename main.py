@@ -1,3 +1,5 @@
+from os import getenv
+from dotenv import load_dotenv; load_dotenv()
 import aiogram
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher, FSMContext
@@ -5,8 +7,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters import Command
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils import executor
-from os import getenv
-from dotenv import load_dotenv; load_dotenv()
+from mnbanks.banks.socialpay import SocialPay
 
 bot_token = getenv('TG_TOKEN')
 bot = Bot(token=bot_token)
@@ -14,6 +15,25 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 
 order_info = {}  # Dictionary to store order information
 
+sp = SocialPay(getenv("GOLOMT_USERNAME"), getenv("GOLOMT_PASSWORD"), getenv("GOLOMT_TXN_PASSWORD"))
+sp.login()
+
+def send_invoice_via_sp(order_detail:dict):
+    print("order_detail", order_detail)
+    if "followers" in order_detail.keys():
+        price = order_detail['followers'] * 10
+        remarks = "followers"
+    if "likes" in order_detail.keys():
+        price = order_detail['likes'] * 3
+        remarks = "likes"
+    if "comments_count" in order_detail.keys():
+        price = order_detail['followers'] * 2.5
+        remarks = "comments"
+    sp.send_invoice(
+        amount=price,
+        social_id=order_detail['phone_number'],
+        remarks=f"{order_detail['username']} {remarks}",
+    )
 
 class FollowerOrderStates(StatesGroup):
     USERNAME = State()
@@ -85,7 +105,7 @@ async def process_followers(callback_query: types.CallbackQuery, state: FSMConte
 
     order_info[user_id] = {'username': username, 'followers': followers_count}
 
-    await bot.send_message(user_id, "Please provide your phone number:")
+    await bot.send_message(user_id, "Please provide your phone number connected with SocialPay:")
     await FollowerOrderStates.PHONE_NUMBER.set()
 
 
@@ -105,6 +125,7 @@ async def process_phone_number(message: types.Message, state: FSMContext):
                                     f"Please make sure your Instagram profile is public before proceeding.")
 
     await state.finish()
+    send_invoice_via_sp(order_info[user_id])
 
 
 @dp.callback_query_handler(lambda c: c.data == 'order_likes')
@@ -146,7 +167,7 @@ async def process_likes_count(callback_query: types.CallbackQuery, state: FSMCon
 
     order_info[user_id] = {'username': username, 'likes': likes_count}
 
-    await bot.send_message(user_id, "Please provide your phone number:")
+    await bot.send_message(user_id, "Please provide your phone number connected with SocialPay:")
     await LikeOrderStates.PHONE_NUMBER.set()
 
 
@@ -166,6 +187,7 @@ async def process_likes_phone_number(message: types.Message, state: FSMContext):
                                     f"Please make sure your Instagram profile is public before proceeding.")
 
     await state.finish()
+    send_invoice_via_sp(order_info[user_id])
 
 
 @dp.callback_query_handler(lambda c: c.data == 'order_comments')
@@ -210,7 +232,7 @@ async def process_comments_text(message: types.Message, state: FSMContext):
 
     order_info[user_id] = {'username': username, 'comments_count': comments_count, 'comments_text': comments_text}
 
-    await bot.send_message(user_id, "Please provide your phone number:")
+    await bot.send_message(user_id, "Please provide your phone number connected with SocialPay:")
     await CommentOrderStates.PHONE_NUMBER.set()
 
 
@@ -231,6 +253,7 @@ async def process_comments_phone_number(message: types.Message, state: FSMContex
                                     f"Please make sure your Instagram profile is public before proceeding.")
 
     await state.finish()
+    send_invoice_via_sp(order_info[user_id])
 
     text = "Order placed successfully!\n\nAvailable commands:"
     inline_keyboard_markup = types.InlineKeyboardMarkup(row_width=1)
