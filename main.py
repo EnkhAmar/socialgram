@@ -22,10 +22,10 @@ sp.login()
 def send_invoice_via_sp(order_detail:dict):
     print("order_detail", order_detail)
     if "followers" in order_detail.keys():
-        price = order_detail['followers'] * 10
+        price = order_detail['followers'] * 2
         remarks = "followers"
     if "likes" in order_detail.keys():
-        price = order_detail['likes'] * 3
+        price = order_detail['likes'] * 1
         remarks = "likes"
     if "comments_count" in order_detail.keys():
         price = order_detail['comments_count'] * 2.5
@@ -143,7 +143,7 @@ async def process_phone_number(message: types.Message, state: FSMContext):
                                     f"Instagram Username: {order_info[user_id]['username']}\n"
                                     f"Number of Followers: {order_info[user_id]['followers']}\n"
                                     f"Phone Number: {order_info[user_id]['phone_number']}\n\n"
-                                    f"Please make sure your Instagram profile is public before proceeding."
+                                    f"Please make sure your Instagram profile is public before proceeding.\n"
                                     f"Invoice has been sent.")
 
     await state.finish()
@@ -155,7 +155,7 @@ async def order_likes(callback_query: types.CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     await bot.answer_callback_query(callback_query.id)
 
-    await bot.send_message(user_id, "Please enter your Instagram username:")
+    await bot.send_message(user_id, "Please enter your url of Instagram post:")
     await LikeOrderStates.USERNAME.set()
 
 
@@ -206,7 +206,7 @@ async def process_likes_phone_number(message: types.Message, state: FSMContext):
                                     f"Instagram Username: {order_info[user_id]['username']}\n"
                                     f"Number of Likes: {order_info[user_id]['likes']}\n"
                                     f"Phone Number: {order_info[user_id]['phone_number']}\n\n"
-                                    f"Please make sure your Instagram profile is public before proceeding."
+                                    f"Please make sure your Instagram profile is public before proceeding.\n"
                                     f"Invoice has been sent.")
 
     await state.finish()
@@ -218,7 +218,7 @@ async def order_comments(callback_query: types.CallbackQuery, state: FSMContext)
     user_id = callback_query.from_user.id
     await bot.answer_callback_query(callback_query.id)
 
-    await bot.send_message(user_id, "Please enter your Instagram username:")
+    await bot.send_message(user_id, "Please enter your url of Instagram post:")
     await CommentOrderStates.USERNAME.set()
 
 
@@ -273,7 +273,7 @@ async def process_comments_phone_number(message: types.Message, state: FSMContex
                                     f"Number of Comments: {order_info[user_id]['comments_count']}\n"
                                     f"Comments: {order_info[user_id]['comments_text']}\n"
                                     f"Phone Number: {order_info[user_id]['phone_number']}\n\n"
-                                    f"Please make sure your Instagram profile is public before proceeding."
+                                    f"Please make sure your Instagram profile is public before proceeding.\n"
                                     f"Invoice has been sent.")
 
     await state.finish()
